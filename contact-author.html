@@ -25,9 +25,9 @@
       font-family: 'Source Serif 4', Georgia, serif;
       min-height: 100vh;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: center;
-      padding: 0;
+      padding: 2rem;
       margin: 0;
     }
 
@@ -538,6 +538,15 @@
       el.closest('.field').classList.remove('invalid');
     });
   });
+
+  // AUTO RESIZE - sends height to parent so iframe fits perfectly
+  function sendHeight() {
+    var height = document.documentElement.scrollHeight;
+    window.parent.postMessage({ iframeHeight: height }, '*');
+  }
+  window.addEventListener('load', sendHeight);
+  window.addEventListener('resize', sendHeight);
+  new ResizeObserver(sendHeight).observe(document.body);
 </script>
 </body>
 </html>
