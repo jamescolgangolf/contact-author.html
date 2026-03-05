@@ -469,8 +469,10 @@
 
 <script>
   // ── CONFIG ───────────────────────────────────────────
-  // Replace with the actual author email address you want messages forwarded to.
-  const AUTHOR_EMAIL = 'author@yourpublication.com';
+  // Reads email from URL parameter e.g. ?email=james@yourpublication.com
+  // Falls back to default if no parameter is provided.
+  const params = new URLSearchParams(window.location.search);
+  const AUTHOR_EMAIL = params.get('email') || 'author@yourpublication.com';
 
   // ── CHAR COUNTER ─────────────────────────────────────
   const msgBody = document.getElementById('msgBody');
