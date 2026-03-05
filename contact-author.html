@@ -469,10 +469,10 @@
 
 <script>
   // ── CONFIG ───────────────────────────────────────────
-  // Reads email from URL parameter e.g. ?email=james@yourpublication.com
-  // Falls back to default if no parameter is provided.
+  // Reads Formspree form ID from URL parameter e.g. ?form=mzdjpzjr
   const params = new URLSearchParams(window.location.search);
-  const AUTHOR_EMAIL = params.get('email') || 'author@yourpublication.com';
+  const formId = params.get('form');
+  const FORMSPREE_ENDPOINT = formId ? `https://formspree.io/f/${formId}` : 'https://formspree.io/f/mzdjpzjr';
 
   // ── CHAR COUNTER ─────────────────────────────────────
   const msgBody = document.getElementById('msgBody');
@@ -487,49 +487,53 @@
   // ── VALIDATION ───────────────────────────────────────
   function validate() {
     let ok = true;
-
     const fields = [
       { id: 'field-name',    input: document.getElementById('senderName'),  check: v => v.trim().length > 0 },
       { id: 'field-email',   input: document.getElementById('senderEmail'), check: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
       { id: 'field-subject', input: document.getElementById('msgSubject'),  check: v => v.trim().length > 0 },
       { id: 'field-message', input: document.getElementById('msgBody'),     check: v => v.trim().length > 5 },
     ];
-
     fields.forEach(f => {
-      const val = f.input.value;
-      const valid = f.check(val);
+      const valid = f.check(f.input.value);
       document.getElementById(f.id).classList.toggle('invalid', !valid);
       if (!valid) ok = false;
     });
-
     return ok;
   }
 
   // ── SEND ─────────────────────────────────────────────
-  function handleSend() {
+  async function handleSend() {
     if (!validate()) return;
+
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+    btn.querySelector('span').textContent = 'Sending…';
 
     const name    = document.getElementById('senderName').value.trim();
     const email   = document.getElementById('senderEmail').value.trim();
     const subject = document.getElementById('msgSubject').value.trim();
     const body    = document.getElementById('msgBody').value.trim();
 
-    // Build a mailto link with all the reader's info in the body
-    const fullBody = `Message from ${name} (${email}):\n\n${body}`;
-    const mailto = `mailto:${AUTHOR_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(fullBody)}`;
+    try {
+      const res = await fetch(FORMSPREE_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ name, email, subject, message: body, _replyto: email })
+      });
 
-    // Open the user's mail client in background
-    const link = document.createElement('a');
-    link.href = mailto;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Show success state
-    document.getElementById('formView').style.display = 'none';
-    const sv = document.getElementById('successView');
-    sv.style.display = 'block';
+      if (res.ok) {
+        document.getElementById('formView').style.display = 'none';
+        document.getElementById('successView').style.display = 'block';
+      } else {
+        btn.disabled = false;
+        btn.querySelector('span').textContent = 'Send Note →';
+        alert('Something went wrong. Please try again.');
+      }
+    } catch(err) {
+      btn.disabled = false;
+      btn.querySelector('span').textContent = 'Send Note →';
+      alert('Something went wrong. Please try again.');
+    }
   }
 
   // ── CLEAR INVALID ON INPUT ───────────────────────────
@@ -539,7 +543,7 @@
     });
   });
 
-  // AUTO RESIZE - sends height to parent so iframe fits perfectly
+  // ── AUTO RESIZE ──────────────────────────────────────
   function sendHeight() {
     var height = document.documentElement.scrollHeight;
     window.parent.postMessage({ iframeHeight: height }, '*');
